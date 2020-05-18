@@ -7,7 +7,7 @@
 #include <iostream>
 #include <utility>
 #include <cstdlib>
-#include "dbj_guid.h"
+#include "dbj_guid/dbj_guid.h"
 #include "uuid4/uuid4.h"
 
 namespace dbj {
