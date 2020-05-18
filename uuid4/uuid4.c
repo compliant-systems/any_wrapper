@@ -9,6 +9,8 @@
 #include <stdint.h>
 
 #if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#define STRICT 1
 #include <windows.h>
 #include <wincrypt.h>
 #endif
@@ -64,7 +66,8 @@ int uuid4_init(void) {
 }
 
 
-void uuid4_generate(char* dst) {
+void uuid4_generate(char dst[UUID4_LEN]) 
+{
     static const char* template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx";
     static const char* chars = "0123456789abcdef";
     union { unsigned char b[16]; uint64_t word[2]; } s;

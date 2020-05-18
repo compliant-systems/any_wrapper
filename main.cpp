@@ -60,7 +60,7 @@ namespace {
 
 int main() {
 
-	dbj::test_dbj_data_store();
+	test_dbj_data_store();
 	// test_dbj_any_wrapper();
 	printf("\n\n%s\n\n", std::string(dbj::any::wrapper<int>(42)).c_str());
 	printf("\n\n%s\n\n", std::string(dbj::any::wrapper<bool>(42)).c_str());

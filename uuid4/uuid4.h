@@ -27,12 +27,29 @@ int main(void) {
 #define UUID4_VERSION "1.0.0"
 #define UUID4_LEN 37
 
-enum {
-    UUID4_ESUCCESS = 0,
-    UUID4_EFAILURE = -1
-};
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-int  uuid4_init(void);
-void uuid4_generate(char* dst);
+    typedef enum {
+        UUID4_ESUCCESS = 0,
+        UUID4_EFAILURE = -1
+    } UUID4_STATUS ;
+
+    int  uuid4_init(void);
+    void uuid4_generate(char dst[UUID4_LEN]);
+
+#ifdef __cplusplus
+} // extern "C" 
+#endif // __cplusplus
+
+#ifdef __cplusplus
+// C++ makes this possible
+namespace {
+    // note: can this ever fail?
+    inline auto uuid4_init_cpp = []() { return uuid4_init(); }();
+}
+#endif // __cplusplus
+
 
 #endif
