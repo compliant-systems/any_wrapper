@@ -34,6 +34,25 @@ namespace dbj {
 
 #endif
 
+	inline bool equal( const GUID & left_, const GUID & right_ ) 
+	{
+		return
+			(left_.Data1 == right_.Data1) &&
+			(left_.Data2 == right_.Data2) &&
+			(left_.Data3 == right_.Data3) &&
+			(left_.Data4[0] == right_.Data4[0]) &&
+			(left_.Data4[1] == right_.Data4[1]) &&
+			(left_.Data4[2] == right_.Data4[2]) &&
+			(left_.Data4[3] == right_.Data4[3]) &&
+			(left_.Data4[4] == right_.Data4[4]) &&
+			(left_.Data4[5] == right_.Data4[5]) &&
+			(left_.Data4[6] == right_.Data4[6]) &&
+			(left_.Data4[7] == right_.Data4[7]);
+	}
+
+	inline bool operator == (const GUID& left_, const GUID& right_) { return equal(left_,right_);  }
+	inline bool operator != (const GUID& left_, const GUID& right_) { return ! equal(left_,right_);}
+
 		namespace details
 		{
 			constexpr const size_t short_guid_form_length = 36;	// XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
