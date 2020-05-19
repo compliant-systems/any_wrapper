@@ -3,6 +3,7 @@
 
 int main() {
 
+	test_dbj_guid();
 	test_dbj_data_store();
 }
 

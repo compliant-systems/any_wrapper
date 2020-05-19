@@ -6,6 +6,7 @@
 //  clang++ prog.cc -Wall -Wextra -std=c++14
 #include <iostream>
 #include <utility>
+#include <mutex>
 #include <cstdlib>
 #include "dbj_guid/dbj_guid.h"
 #include "uuid4/uuid4.h"
@@ -24,32 +25,41 @@ namespace dbj {
     // thus its moveability and copyability depends entirely
     // on the moveability and copyability of that value type
     template<typename T , guid_source store_id_ >
-    struct data final
+    struct protected_data final
     {
-        using type = data;
+        using type = protected_data;
         using value_type = T;
+        using  padlock = std::lock_guard<std::mutex> ;
 
         // not before here we use the result of the 
         // guid_source function
         static dbj::GUID store_guid() noexcept {
+            type::padlock lock(type::protector_);
             return store_id_();
         }
 
-        inline static value_type last_{ };
-
         // store new value
-        // by mandating pointer arg
-        // we disallow temporaries
-        static value_type store(const T* new_val)
+        static value_type store(const T & new_val)
         {
-            if (new_val) type::last_ = *new_val;
+            type::padlock lock(type::protector_);
+            type::last_ = new_val;
             return type::last_;
         };
 
-        // just read the stored value
-        static value_type read(void) { return type::last_; }
+        // disallow temporaries
+        static value_type store( T && ) = delete;
 
-    }; // data
+
+        // just read the stored value
+        static value_type read(void) { 
+            type::padlock lock( type::protector_ );
+            return type::last_; 
+        }
+
+    private:
+        inline static value_type last_{};
+        inline static std::mutex protector_{};  // protects last_
+    }; // protected_data
 
 } // dbj
 
@@ -60,8 +70,8 @@ namespace {
     // identification source is a function which returns dbj::GUID
     // footprint is: dbj::GUID (*)();
 
-    // using the UDL
-    inline dbj::GUID guid_a() {
+    // using the UDL and compile time 
+    constexpr inline dbj::GUID guid_a() {
         using namespace dbj::literals;
         return "{FE297330-BAA5-407F-BB47-F78752D2C209}"_guid;
     }
@@ -74,25 +84,20 @@ namespace {
 
     inline void test_dbj_data_store()
     {
-
-        using dbj::data;
-        using namespace dbj::literals;
-        constexpr dbj::GUID guid_dbj_a = "{FE297330-BAA5-407F-BB47-F78752D2C209}"_guid;
-        constexpr dbj::GUID guid_dbj_b = "{AB297330-BAA5-407F-BB47-F78752D2C209}"_guid;
+        using dbj::protected_data;
 
         // this is why we have second template argument
         // to have two different stores for the same data type
-        using store_a = data<int, guid_a >;
-        using store_b = data<int, guid_b >;
+        using store_a = protected_data<int, guid_a >;
+        using store_b = protected_data<int, guid_b >;
 
         int fty2 = 42;
-        store_a::store(&fty2);
+        store_a::store(fty2);
 
         std::cout << "\nA Stored: " << store_a::read();
         std::cout << "\nB Stored: " << store_b::read();
 
-        auto guido = store_a::store_guid();
-        auto guida = store_b::store_guid();
+       assert( store_a::store_guid() != store_b::store_guid() );
     }
 
 }
