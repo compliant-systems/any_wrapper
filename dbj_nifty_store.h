@@ -145,7 +145,6 @@ namespace {
 
 		int fty2 = 42;
 		int th_teen = 13;
-		store_a::store(fty2);
 		store_user<store_a>(fty2);
 
 		// we could do it this way

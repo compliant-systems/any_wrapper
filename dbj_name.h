@@ -1,8 +1,18 @@
 #pragma once
 
+#include <memory>
+
 #ifndef _WIN32
 #include <cxxabi.h>
 #endif
+
+/*
+OS agnostic typename
+works with GCC and CLANG on Linux etc ...
+*/
+#define DBJ_TYPE_NAME(T) dbj::name<T>().c_str()
+#define DBJ_TYPENAME(T) dbj::name<decltype(T)>().c_str()     
+
 
 namespace dbj {
 	template < typename T >
