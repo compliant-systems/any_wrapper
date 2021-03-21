@@ -168,13 +168,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="uuid4\uuid4.c" />
+    <ClCompile Include="dbj_guid\uuid4.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="common.h" />
     <ClInclude Include="dbj_guid\dbj_guid.h" />
     <ClInclude Include="dbj_name.h" />
     <ClInclude Include="dbj_nifty_store.h" />
-    <ClInclude Include="uuid4\uuid4.h" />
+    <ClInclude Include="dbj_guid\uuid4.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />

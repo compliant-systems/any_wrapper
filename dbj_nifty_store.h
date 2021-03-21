@@ -9,7 +9,6 @@
 #include <mutex>
 #include <cstdlib>
 #include "dbj_guid/dbj_guid.h"
-#include "uuid4/uuid4.h"
 
 namespace dbj {
 
@@ -108,10 +107,14 @@ namespace {
 		return "{FE297330-BAA5-407F-BB47-F78752D2C209}"_guid;
 	}
 
-	// option is
+	// option is runtime
 	// using the WIN or not WIN generator 
 	inline dbj::GUID guid_b() {
-		static auto dbj_legacy_guid = dbj_runtime_guid();
+#ifdef DBJ_USES_RPC_GUID
+		static auto dbj_legacy_guid = win_rpc_guid();
+#else
+		static auto dbj_legacy_guid = uuid4_guid();
+#endif
 		return dbj_legacy_guid;
 	}
 

@@ -11,35 +11,7 @@
 #ifndef DJB_GUID_INC
 #define DJB_GUID_INC
 
-#include <assert.h>
-#include <stdint.h>
-
-// https://gcc.gnu.org/onlinedocs/cpp/Pragmas.html
-#define DO_PRAGMA_(x) _Pragma (#x)
-#define DO_PRAGMA(x) DO_PRAGMA_(x)
-
-#ifdef __clang__
-#define NUSED_BEGIN \
-	DO_PRAGMA(clang diagnostic push) \
-	DO_PRAGMA(clang diagnostic ignored "-Wunused-variable")
-#else
-#define NUSED_BEGIN \
-DO_PRAGMA( warning( push ) ) \
-DO_PRAGMA( warning( disable : 4101) )
-#endif  // __clang__
-
-#ifdef __clang__
-#define NUSED_END DO_PRAGMA(clang diagnostic pop)
-#else  // ! __clang__
-#define NUSED_END DO_PRAGMA( warning( pop ) ) 
-#endif  // ! __clang__
-
-// thing to be supressed must be on the next line
-#ifdef _MSC_VER
-#define DBJ_SUPRESS DO_PRAGMA(warning(suppress: 4101))
-#else
-#define DBJ_SUPRESS
-#endif
+#include "../common.h"
 
 
 namespace dbj {
@@ -192,6 +164,25 @@ namespace dbj {
 
 // we have here portable UUID generator but I very much doubt
 // "enterprise" developers will be allowed to use it
+#include "uuid4.h"
+namespace {
+	/*
+	little non win portable uuid generator
+	note: works for windows too
+	*/
+	inline dbj::GUID uuid4_guid() noexcept {
+		char string_uuid_[UUID4_LEN]{};
+		uuid4_generate(string_uuid_);
+
+		dbj::GUID win_rpc_guid_ =
+			dbj::details::make_guid_helper(
+				(const char*)string_uuid_,
+				strlen((const char*)string_uuid_)
+			);
+
+		return win_rpc_guid_;
+	}
+} //nspace
 
 // note: rpc.h also includes windows.h so we shall not #include rpc.h
 // Note: if this is used in the code which does include rpc.h 
@@ -229,25 +220,21 @@ extern "C" {
 
 } // "C" 
 
-#endif // __RPC_H__
+#endif // ! __RPC_H__
 
 // for RPC usage in WIN32 this lib manual inclusion is mandatory
 #pragma comment(lib, "Rpcrt4.lib")
 #include <crtdbg.h>
-
-#else  // not _WIN32
-#include "../uuid4/uuid4.h"
-#endif // not _WIN32
-
+#endif // _WIN32
 
 // note: you know that anonymouys namespace leaves it to the linker what to do with 
 // inlines inside it, which almost always in that scenario are turned into statics
 namespace {
-#if defined(_WIN32)
+#ifdef _WIN32
 	/*
 	windows uses DCE RPC
 	*/
-	inline dbj::GUID dbj_runtime_guid() {
+	inline dbj::GUID win_rpc_guid() noexcept {
 		UUID legacy_uuid_;
 		RPC_STATUS rpc_rezult_ = UuidCreate(&legacy_uuid_);
 		_ASSERTE(rpc_rezult_ == RPC_S_OK);
@@ -272,27 +259,9 @@ namespace {
 	}
 
 #undef RPC_S_OK
-#else // NOT _WIN32
-	/*
-	little non win portable uuid generator
-	note: works for windows too
-	*/
-	inline dbj::GUID dbj_runtime_guid() {
-		char string_uuid_[UUID4_LEN]{};
-		uuid4_generate(string_uuid_);
+#endif // _WIN32
 
-		dbj::GUID win_rpc_guid_ =
-			dbj::details::make_guid_helper(
-				(const char*)string_uuid_,
-				strlen((const char*)string_uuid_)
-			);
-
-		return win_rpc_guid_;
-	}
-#endif // NOT _WIN32
-
-
-	inline void test_dbj_guid() {
+	inline void test_dbj_guid() noexcept {
 
 		using namespace dbj::literals;
 
@@ -304,11 +273,16 @@ namespace {
 
 		static_assert(!is_null(guid_1));
 
-		// runtime 
-		// this is portable function
-		dbj::GUID  guid_3 = dbj_runtime_guid();
-
+		// runtime GUID makers
+		// this is WIN32 function
+#ifdef _WIN32
+		dbj::GUID  guid_3 = win_rpc_guid();
 		assert(guid_1 != guid_3);
+#endif // _WIN32
+
+		dbj::GUID  guid_4 = uuid4_guid(); // internaly OS agnostic
+		assert(guid_1 != guid_4);
+
 	}
 
 } // nspace
