@@ -4,7 +4,7 @@
 
 // dbj nifty store -- aka "C++ Snake Oil" Inc.
 //  clang++ prog.cc -Wall -Wextra -std=c++14
-#include <iostream>
+#include <stdio.h>
 #include <utility>
 #include <mutex>
 #include <cstdlib>
@@ -31,20 +31,17 @@ namespace dbj {
 
 	using guid_source = dbj::GUID(*)();
 
-	// this class has only one data member and no methods
-	// ctros or dtors
-	// thus its moveability and copyability depends entirely
-	// on the moveability and copyability of that value type
-	// all ireleveant since this is statics only class
+	// this class has only one static data member and no methods
+	// this is all statics type
 	// menaing type contains all the functionality
-	// not the instance
+	// not instances
 	template<
 		typename T,
 		// at compile time function pointer itself is 
 		// giving unique ID not its call result
-		// at runtime stor_id_ provides the actuall GUID
+		// at runtime store_id_ provides the actuall GUID
 		guid_source store_id_,
-		// by defauly we de not lock
+		// by default we de not lock
 		typename LOCK = nolock
 	>
 		struct data final
@@ -54,16 +51,19 @@ namespace dbj {
 		using lock_type = LOCK;
 
 
-		// not before here we use the result of the 
+		// not before this point we use the result of the 
 		// guid_source function
 		static dbj::GUID store_guid() noexcept {
+#pragma warning(suppress: 4101)
 			LOCK guard;
 			return store_id_();
 		}
 
+		// warning C4101
 		// store new value
 		static value_type store(const T& new_val) noexcept
 		{
+#pragma warning(suppress: 4101)
 			lock_type guard;
 			type::last_ = new_val;
 			return type::last_;
@@ -72,89 +72,70 @@ namespace dbj {
 		// disallow temporaries
 		static value_type store(T&&) = delete;
 
-
 		// just read the stored value
 		static value_type read(void) noexcept {
+#pragma warning(suppress: 4101)
 			lock_type guard;
 			return type::last_;
 		}
 
+		// this is no instances type
+		// thus we will stop that nonsense ;)
+
+		data() = delete;
+		~data() = delete;
+		data(data const&) = delete;
+		data& operator = (data const&) = delete;
+		data(data&&) = delete;
+		data& operator = (data&&) = delete;
+
 	private:
 		inline static value_type last_{};
-
 	}; // data
-
 } // dbj
 
 
 
 namespace {
 
-	// identification source is a function which returns dbj::GUID
+	// identification source is a function pointer which returns dbj::GUID
 	// footprint is: dbj::GUID (*)();
 
-	// using the UDL and compile time 
+	// _guid UDL is compile time UDL
+	// dbj::GUID is also a literal type
 	constexpr inline dbj::GUID guid_a() {
 		using namespace dbj::literals;
 		return "{FE297330-BAA5-407F-BB47-F78752D2C209}"_guid;
 	}
 
+	// option is
 	// using the WIN or not WIN generator 
 	inline dbj::GUID guid_b() {
 		static auto dbj_legacy_guid = dbj_runtime_guid();
 		return dbj_legacy_guid;
 	}
 
-	// here we show we are dealing with the type 
-	// not instances
-	template< typename STORE >
-	inline void store_user(
-		typename STORE::value_type const& new_val_
-	)
-	{
-		STORE::store(new_val_);
-	}
-
-	// we could pass store instance as argument
-	template< typename STORE >
-	inline void store_silly_user(
-		STORE store_instance_, typename STORE::value_type const& new_val_
-	)
-	{
-		store_instance_.store(new_val_);
-	}
-
-	// dissalow dangling ref's
-	template< typename STORE >
-	inline void store_user(typename STORE::value_type&&) = delete;
-
-	// NOTE: above we do not car or deal with thread resilience
-	// store's are thread resilient or not
-	// like store_b is and store_a is not
-
-	inline void test_dbj_data_store()
+	inline void test_dbj_data_store() noexcept
 	{
 		using dbj::data;
 
-		// this is why we have second template argument
-		// to have two different stores for the same data type
+		// first store does not protect the data in presence of multipla threads
 		using store_a = data<int, guid_a >;
 
 		// second store protects the data in presence of multipla threads
 		using store_b = data<int, guid_b, dbj::padlock >;
 
+		// the type has the operations
+		// temporary can not be used
 		int fty2 = 42;
-		int th_teen = 13;
-		store_user<store_a>(fty2);
+		store_b::store(fty2);
 
-		// we could do it this way
-		// but that is slower since we copy the instance in
-		// and the result is the same but slower
-		// you just do not need instances
-		store_silly_user(store_b{}, th_teen);
+		// store_b::store(13); does not compile
+		int one3 = 13;
+		store_b::store(one3);
 
-		std::cout << "\nA Stored: " << store_a::read();
-		std::cout << "\nB Stored: " << store_b::read();
+		printf("\nA has in store: %4d", store_a::read());
+		printf("\nB has in store: %4d", store_b::read());
 
 		assert(store_a::store_guid() != store_b::store_guid());
 	}

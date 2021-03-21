@@ -4,15 +4,43 @@
 // Written by Tobias Loew
 // Written by DBJ -- note: this is not GUID generator. 
 //                    Also vs WIN32 this is largely compile time excersize
+//                    This file does not depend on std lib
 //
 // Licensed under the MIT license.
 //-------------------------------------------------------------------------------------------------------
 #ifndef DJB_GUID_INC
 #define DJB_GUID_INC
 
-#include <string>
-#include <cassert>
-#include <cstdint>
+#include <assert.h>
+#include <stdint.h>
+
+// https://gcc.gnu.org/onlinedocs/cpp/Pragmas.html
+#define DO_PRAGMA_(x) _Pragma (#x)
+#define DO_PRAGMA(x) DO_PRAGMA_(x)
+
+#ifdef __clang__
+#define NUSED_BEGIN \
+	DO_PRAGMA(clang diagnostic push) \
+	DO_PRAGMA(clang diagnostic ignored "-Wunused-variable")
+#else
+#define NUSED_BEGIN \
+DO_PRAGMA( warning( push ) ) \
+DO_PRAGMA( warning( disable : 4101) )
+#endif  // __clang__
+
+#ifdef __clang__
+#define NUSED_END DO_PRAGMA(clang diagnostic pop)
+#else  // ! __clang__
+#define NUSED_END DO_PRAGMA( warning( pop ) ) 
+#endif  // ! __clang__
+
+// thing to be supressed must be on the next line
+#ifdef _MSC_VER
+#define DBJ_SUPRESS DO_PRAGMA(warning(suppress: 4101))
+#else
+#define DBJ_SUPRESS
+#endif
+
 
 namespace dbj {
 
@@ -33,7 +61,7 @@ namespace dbj {
 
 	// we do not use exceptions, on error we return null guid
 	constexpr inline GUID null_guid{ 0,0,0, {0,0,0,0,0,0,0,0} };
-	
+
 	constexpr inline bool is_null(const GUID& guid_)
 	{
 		return (&guid_ == &null_guid);
@@ -64,10 +92,9 @@ namespace dbj {
 		constexpr const size_t short_guid_form_length = 36;	// XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 		constexpr const size_t long_guid_form_length = 38;	// {XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}
 
-															//
+		//
 		constexpr uint8_t parse_hex_digit(const char c)
 		{
-			using namespace std::string_literals;
 			return
 				('0' <= c && c <= '9')
 				? c - '0'
@@ -76,7 +103,7 @@ namespace dbj {
 				: ('A' <= c && c <= 'F')
 				? 10 + c - 'A'
 				:
-				throw std::domain_error{ "invalid character in GUID" };
+				(perror(__FILE__ " -- invalid character in GUID"), exit(0), '?');
 		}
 
 		constexpr uint8_t parse_hex_uint8_t(const char* ptr)
@@ -118,7 +145,6 @@ namespace dbj {
 		// we set errno to EINVAL and return dbj::null_guid 
 		constexpr GUID make_guid_helper(const char* str, size_t N)
 		{
-			using namespace std::string_literals;
 			using namespace details;
 
 			if (!(N == long_guid_form_length || N == short_guid_form_length)) {
@@ -173,6 +199,8 @@ namespace dbj {
 
 #if defined(_WIN32)
 
+#ifndef __RPC_H__
+
 extern "C" {
 
 #define RPC_S_OK 0
@@ -201,15 +229,18 @@ extern "C" {
 
 } // "C" 
 
+#endif // __RPC_H__
+
 // for RPC usage in WIN32 this lib manual inclusion is mandatory
 #pragma comment(lib, "Rpcrt4.lib")
 #include <crtdbg.h>
+
 #else  // not _WIN32
 #include "uuid4/uuid4.h"
 #endif // not _WIN32
 
 
-// note: you know that anonymouys namespace leaves to the linker what to do with 
+// note: you know that anonymouys namespace leaves it to the linker what to do with 
 // inlines inside it, which almost always in that scenario are turned into statics
 namespace {
 #if defined(_WIN32)

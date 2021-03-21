@@ -76,32 +76,28 @@ namespace dbj {
 				if (!empty()) {
 					return invoke(get(), forward<ArgTypes>(args)...);
 				}
-				throw std::runtime_error{ " can not call on empty data wrapped " };
+
+				perror("can not call on empty data wrapped ");
+				exit(0);
 			}
 
-			const data_type get() const {
-				try {
-					return any_cast<data_type>(this->any_);
-				}
-				catch (std::bad_any_cast& x) {
-					throw std::runtime_error{ x.what() };
-				}
+			data_type get() const noexcept {
+
+				return any_cast<data_type>(this->any_);
+				// return data_type{};
 			}
 
 			bool empty() const {
 				return !(this->any_).has_value();
 			}
 
-			const std::string to_string() const {
+			const std::string to_string() const noexcept
+			{
 				const auto val_ = this->get();
-				if constexpr (std::is_arithmetic<decltype(val_)>()) {
-					return { std::to_string(val_) };
-				}
-
-				if constexpr (std::is_integral<decltype(val_)>()) {
-					return { std::to_string(val_) };
-				}
-				return { reinterpret_cast<const char*>(val_) };
+				// no need for template jockeying
+				// STL will complain enough if dubious 
+				// to_string is attempted
+				return { std::to_string(val_) };
 			}
 
 			// not really necessary?
@@ -134,7 +130,7 @@ namespace dbj {
 		// input is T[N] native array 
 		// each element of an T[N] is any wrapped
 		// and the result is kept inside std::aray
-		// crazy ... ?
+		// crazy, but true ...
 		template <
 			typename T,
 			std::size_t N,
@@ -160,118 +156,52 @@ namespace dbj {
 // as long as you are aware ...
 namespace {
 
-	auto print_dbj_any = [](FILE* fp_, const char* prefix_, auto dbj_any) {
+	inline auto
+		print_dbj_any = [](FILE* fp_, const char* prefix_, auto dbj_any)
+		noexcept
+	{
 		// depends on to_string() correct implementation
 		std::fprintf(fp_, "%s %s", prefix_, dbj_any.to_string().c_str());
 	};
 
-	void test_dbj_any_wrapper_range() {
-
-		using namespace dbj;
-		try {
-			// transforming native array T[N] into std::array of 
-			// any wrapped T's
-			int int_arr[]{ 42 };
-
-			std::array arr_of_wraps = any::wrapper_range(int_arr);
-
-			// value type of any_0 is any wrapper
-			using wrapper_type = typename decltype(arr_of_wraps)::value_type;
-			using wrapper_data_type = wrapper_type::data_type;
-
-			std::printf(
+	inline  void
+		test_dbj_any_wrapper_range()
+		noexcept
+	{
+		auto types_show = [](auto int_arr, auto arr_of_wraps) noexcept {
+			printf(
 				"\n\nTransformed %s into %s ", DBJ_TYPENAME(int_arr), DBJ_TYPENAME(arr_of_wraps)
 			);
-
+		};
+		auto arr_print = [](auto arr_of_wraps) noexcept {
 			std::printf(" [");
 			for (auto& elem : arr_of_wraps) {
 				printf(" %s", elem.to_string().c_str());
 			}
 			std::printf(" ]");
-
-			{
-				// yes can do
-				// string literal to std::array kept 
-				// inside dbj::any::wrapper inside std::any
-				char word_[] = "Hello dbj any!";
-				std::array arr_of_wraps = dbj::any::wrapper_range(word_);
-				using v2_data_t = typename decltype(arr_of_wraps)::value_type;
-
-				std::printf(
-					"\n\nTransformed %s into %s ",
-					DBJ_TYPENAME(word_), DBJ_TYPENAME(arr_of_wraps)
-				);
-			}
-		}
-		catch (...) {
-			std::printf(
-				"  Unknown exception caught in %s ",
-				__func__
-			);
-		}
-	}
-}
-
-
-// makes everything inside it static
-// as long as you are aware ...
-namespace {
-
-	auto print_dbj_any = [](FILE* fp_, const char* prefix_, auto dbj_any) {
-		// depends on to_string() correct implementation
-		std::fprintf(fp_, "%s %s", prefix_, dbj_any.to_string().c_str());
-	};
-
-	void test_dbj_any_wrapper_range() {
+		};
 
 		using namespace dbj;
-		try {
-			// transforming native array T[N] into std::array of 
+
+		// transforming native array T[N] into std::array of 
 			// any wrapped T's
-			int int_arr[]{ 42 };
+		int int_arr[]{ 42 };
+		std::array arr_of_wraps = any::wrapper_range(int_arr);
+		types_show(int_arr, arr_of_wraps);
+		arr_print(arr_of_wraps);
 
-			std::array arr_of_wraps = any::wrapper_range(int_arr);
-
-			// value type of any_0 is any wrapper
-			using wrapper_type = typename decltype(arr_of_wraps)::value_type;
-			using wrapper_data_type = wrapper_type::data_type;
-
-			std::printf(
-				"\n\nTransformed %s into %s ", DBJ_TYPENAME(int_arr), DBJ_TYPENAME(arr_of_wraps)
-			);
-
-			std::printf(" [");
-			for (auto& elem : arr_of_wraps) {
-				printf(" %s", elem.to_string().c_str());
-			}
-			std::printf(" ]");
-
-			{
-				// yes can do
-				// string literal to std::array kept 
-				// inside dbj::any::wrapper inside std::any
-				char word_[] = "Hello dbj any!";
-				std::array arr_of_wraps = dbj::any::wrapper_range(word_);
-				using v2_data_t = typename decltype(arr_of_wraps)::value_type;
-
-				std::printf(
-					"\n\nTransformed %s into %s ",
-					DBJ_TYPENAME(word_), DBJ_TYPENAME(arr_of_wraps)
-				);
-			}
-		}
-		catch (...) {
-			std::printf(
-				"  Unknown exception caught in %s ",
-				__func__
-			);
+		{
+			char word_[] = "Hello dbj any!";
+			std::array arr_of_wraps = dbj::any::wrapper_range(word_);
+			types_show(word_, arr_of_wraps);
+			arr_print(arr_of_wraps);
 		}
 	}
 }
 
 
 /* standard suffix */
-#pragma comment( user, __FILE__ "(c) 2018 - 2020 by dbj@dbj.org | Version: " __DATE__ __TIME__ ) 
+#pragma comment( user, __FILE__ "(c) 2018 - 2021 by dbj@dbj.org | Version: " __DATE__ __TIME__ ) 
 /*
 Copyright 2017 - 2020 by dbj@dbj.org
 
